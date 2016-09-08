@@ -18,12 +18,37 @@ np.random.seed(1337)  # for reproducibility
 from keras.preprocessing import sequence
 from keras.utils import np_utils
 from keras.models import Sequential
+from keras.engine import Layer, InputSpec
+from keras import backend as K
 from keras.layers.core import Dense, Dropout, Activation
 from keras.layers.embeddings import Embedding
 from keras.layers.recurrent import LSTM, SimpleRNN, GRU
-from keras.layers.pooling import GlobalMaxPooling1D as GMP, GlobalAveragePooling1D as GAP
 from keras.datasets import imdb
 from nltk.tokenize import word_tokenize as tokenize
+
+class _GlobalPooling1D(Layer):
+
+    def __init__(self, **kwargs):
+        super(_GlobalPooling1D, self).__init__(**kwargs)
+        self.input_spec = [InputSpec(ndim=3)]
+
+    def get_output_shape_for(self, input_shape):
+        return (input_shape[0], input_shape[2])
+
+    def call(self, x, mask=None):
+        raise NotImplementedError
+
+
+class GlobalAveragePooling1D(_GlobalPooling1D):
+    '''Global average pooling operation for temporal data.
+    # Input shape
+        3D tensor with shape: `(samples, steps, features)`.
+    # Output shape
+        2D tensor with shape: `(samples, features)`.
+    '''
+
+    def call(self, x, mask=None):
+        return K.mean(x, axis=1)
 
 max_features = 20000
 maxlen = 80  # cut texts after this number of words (among top max_features most common words)
@@ -107,7 +132,7 @@ model.add(Embedding(len(dic)+1, 200, dropout=0.2, mask_zero=True))
 model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2))
-model.add(GAP())
+model.add(GlobalAveragePooling1D())
 model.add(Activation('sigmoid'))
 
 model.compile(loss='binary_crossentropy',
