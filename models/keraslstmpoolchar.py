@@ -131,7 +131,7 @@ model = Sequential()
 model.add(Embedding(len(dic)+1, 200, dropout=0.2, mask_zero=True))
 model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
-model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2))
+model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 model.add(GlobalAveragePooling1D())
 model.add(Activation('sigmoid'))
 
