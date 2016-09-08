@@ -25,8 +25,8 @@ from nltk.tokenize import word_tokenize as tokenize
 
 max_features = 20000
 maxlen = 80  # cut texts after this number of words (among top max_features most common words)
-batch_size = 500
-mode = "word"
+batch_size = 50
+mode = "char"
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
     assert(mode is not None)
@@ -101,18 +101,17 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 print('Build model...')
 model = Sequential()
 model.add(Embedding(len(dic), 200, dropout=0.2, mask_zero=True))
-model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2, return_sequences=True))  # try using a GRU instead, for fun
+model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))  # try using a GRU instead, for fun
 model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2))
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
-# try using different optimizers and different optimizer configs
 model.compile(loss='binary_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
 
 print('Train...')
-model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=15,
+model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=30,
           validation_data=(testdata, testgold))
 score, acc = model.evaluate(testdata, testgold,
                             batch_size=batch_size)
