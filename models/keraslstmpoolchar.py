@@ -135,6 +135,13 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 (traindata, traingold), (testdata, testgold), dic = readdata("../data/kaggle/train.csv", "../data/kaggle/test_with_solutions.csv",
                                                              mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
 
+# subsample for balancing
+posindexes = np.argwhere(traingold)
+negindexes = np.argwhere(1-traingold)
+allindexes = sorted(list(posindexes[:, 0]) + list(negindexes[:posindexes.shape[0], 0]))
+subtraindata = traindata[allindexes, :]
+subtraingold = traingold[allindexes, :]
+
 #embed()
 print('Build model...')
 model = Sequential()
