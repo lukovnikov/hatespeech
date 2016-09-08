@@ -65,6 +65,7 @@ maxlen = 100  # cut texts after this number of words (among top max_features mos
 batch_size = 200
 mode = "char"
 subsample = False
+maxpool = False
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
     assert(mode is not None)
@@ -155,9 +156,10 @@ print('Build model...')
 model = Sequential()
 model.add(Embedding(len(dic)+1, 50, dropout=0.2, mask_zero=True))
 model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
-model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 #model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
-model.add(GlobalMaxPooling1D())
+model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=maxpool))
+if maxpool:
+    model.add(GlobalMaxPooling1D())
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
