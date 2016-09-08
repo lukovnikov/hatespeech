@@ -26,6 +26,7 @@ from nltk.tokenize import word_tokenize as tokenize
 max_features = 20000
 maxlen = 80  # cut texts after this number of words (among top max_features most common words)
 batch_size = 500
+mode = "word"
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
     assert(mode is not None)
@@ -93,11 +94,12 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
     return (traindata, traingold), (testdata, testgold), chardic
 
 # load data
-(traindata, traingold), (testdata, testgold), dic = readdata("../data/kaggle/train.csv", "../data/kaggle/test.csv", mode="word")
+(traindata, traingold), (testdata, testgold), dic = readdata("../data/kaggle/train.csv", "../data/kaggle/test.csv",
+                                                             mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
 
 print('Build model...')
 model = Sequential()
-model.add(Embedding(max_features, 200, dropout=0.2))
+model.add(Embedding(max_features, 200, dropout=0.2, mask_zero=True))
 model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2))  # try using a GRU instead, for fun
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
