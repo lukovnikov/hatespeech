@@ -101,7 +101,7 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 print('Build model...')
 model = Sequential()
 model.add(Embedding(len(dic), 200, dropout=0.2, mask_zero=True))
-model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2))  # try using a GRU instead, for fun
+model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2, return_sequences=True))  # try using a GRU instead, for fun
 model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2))
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
@@ -112,7 +112,7 @@ model.compile(loss='binary_crossentropy',
               metrics=['accuracy'])
 
 print('Train...')
-model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=15,
+model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=30,
           validation_data=(testdata, testgold))
 score, acc = model.evaluate(testdata, testgold,
                             batch_size=batch_size)
