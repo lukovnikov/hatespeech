@@ -11,7 +11,7 @@ Some configurations won't converge.
 from what you see with CNNs/MLPs/etc.
 '''
 from __future__ import print_function
-import numpy as np, csv, keras
+import numpy as np, csv, keras, unidecode
 from IPython import embed
 np.random.seed(1337)  # for reproducibility
 
@@ -61,9 +61,9 @@ class GlobalMaxPooling1D(_GlobalPooling1D):
 print(keras.__version__)
 
 max_features = 20000
-maxlen = 100  # cut texts after this number of words (among top max_features most common words)
+maxlen = 200  # cut texts after this number of words (among top max_features most common words)
 batch_size = 200
-mode = "char"
+mode = "word"
 subsample = False
 maxpool = False
 
@@ -85,7 +85,7 @@ def readdata_word(trainp, testp, maxlen=100, masksym=-1):
         with open(p) as f:
             data = csv.reader(f, delimiter=",")
             for row in data:
-                rowelems = tokenize(row[2])
+                rowelems = tokenize(unidecode.unidecode(row[1].decode("utf-8")))
                 realmaxlen = max(realmaxlen, len(rowelems))
                 if len(rowelems) > maxlen:
                     toolong += 1
@@ -93,7 +93,7 @@ def readdata_word(trainp, testp, maxlen=100, masksym=-1):
                     if rowelem not in wdic:
                         wdic[rowelem] = len(wdic)
                 dataret.append([wdic[x] for x in rowelems])
-                goldret.append(row[0])
+                goldret.append(row[2])
         print("{} comments were too long".format(toolong))
         maxlen = min(maxlen, realmaxlen)
         datamat = np.ones((len(dataret) - 1, maxlen)).astype("int32") * masksym
@@ -137,13 +137,14 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
     return (traindata, traingold), (testdata, testgold), chardic
 
 # load data
-(traindata, traingold), (testdata, testgold), dic = readdata("../data/twitter/train.csv", "../data/twitter/train.csv",
+(traindata, traingold), (testdata, testgold), dic = readdata("../data/twitter/train.ascii.csv", "../data/twitter/train.ascii.csv",
                                                              mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
 testdata = testdata[:500]
 testgold = testgold[:500]
 print("{}/{}".format(np.sum(traingold == 1), np.sum(traingold.shape[0])))
 
 print(traindata.shape, testdata.shape, len(dic))
+embed()
 # subsample for balancing
 if subsample:
     posindexes = np.argwhere(traingold)
