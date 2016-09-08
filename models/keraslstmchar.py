@@ -12,6 +12,7 @@ from what you see with CNNs/MLPs/etc.
 '''
 from __future__ import print_function
 import numpy as np, csv
+from IPython import embed
 np.random.seed(1337)  # for reproducibility
 
 from keras.preprocessing import sequence
@@ -98,10 +99,12 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 (traindata, traingold), (testdata, testgold), dic = readdata("../data/kaggle/train.csv", "../data/kaggle/test_with_solutions.csv",
                                                              mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
 
+#embed()
 print('Build model...')
 model = Sequential()
-model.add(Embedding(len(dic), 200, dropout=0.2, mask_zero=True))
-model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))  # try using a GRU instead, for fun
+model.add(Embedding(len(dic)+1, 200, dropout=0.2, mask_zero=True))
+model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
+model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2))
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
