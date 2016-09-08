@@ -25,7 +25,7 @@ from nltk.tokenize import word_tokenize as tokenize
 
 max_features = 20000
 maxlen = 80  # cut texts after this number of words (among top max_features most common words)
-batch_size = 500
+batch_size = 50
 mode = "char"
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
