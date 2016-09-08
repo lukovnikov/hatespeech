@@ -42,6 +42,7 @@ def readdata_word(trainp, testp, maxlen=100, masksym=-1):
         goldret = []
         toolong = 0
         realmaxlen = 0
+        wdic[None] = masksym
         with open(p) as f:
             data = csv.reader(f, delimiter=",")
             for row in data:
@@ -99,7 +100,7 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 
 print('Build model...')
 model = Sequential()
-model.add(Embedding(max_features, 200, dropout=0.2, mask_zero=True))
+model.add(Embedding(len(dic), 200, dropout=0.2, mask_zero=True))
 model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2))  # try using a GRU instead, for fun
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
