@@ -61,7 +61,7 @@ class GlobalMaxPooling1D(_GlobalPooling1D):
 print(keras.__version__)
 
 max_features = 20000
-maxlen = 80  # cut texts after this number of words (among top max_features most common words)
+maxlen = 100  # cut texts after this number of words (among top max_features most common words)
 batch_size = 20
 mode = "char"
 
@@ -138,10 +138,10 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 #embed()
 print('Build model...')
 model = Sequential()
-model.add(Embedding(len(dic)+1, 200, dropout=0.2, mask_zero=True))
+model.add(Embedding(len(dic)+1, 300, dropout=0.2, mask_zero=True))
 model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
-model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
+model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 model.add(GlobalMaxPooling1D())
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
