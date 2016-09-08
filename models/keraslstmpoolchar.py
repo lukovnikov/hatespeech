@@ -140,7 +140,7 @@ posindexes = np.argwhere(traingold)
 negindexes = np.argwhere(1-traingold)
 allindexes = sorted(list(posindexes[:, 0]) + list(negindexes[:posindexes.shape[0], 0]))
 subtraindata = traindata[allindexes, :]
-subtraingold = traingold[allindexes, :]
+subtraingold = traingold[allindexes]
 
 #embed()
 print('Build model...')
