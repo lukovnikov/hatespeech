@@ -24,7 +24,7 @@ from keras.datasets import imdb
 
 max_features = 20000
 maxlen = 80  # cut texts after this number of words (among top max_features most common words)
-batch_size = 32
+batch_size = 500
 
 print('Loading data...')
 (X_train, y_train), (X_test, y_test) = imdb.load_data(nb_words=max_features)
