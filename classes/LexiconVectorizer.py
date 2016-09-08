@@ -82,7 +82,7 @@ class LexiconVectorizer(TransformerMixin):
                     else :
                         vector = ovec         
                 vector = vector.todense()
-            else :
+            else:
                 #can't skip because np.empty is > 0 
                 vector = np.zeros(len(self.lexicon))
         
