@@ -180,10 +180,20 @@ model.compile(loss='binary_crossentropy',
               optimizer=Adadelta(),
               metrics=['accuracy'])
 
+
 print('Train...')
-model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=30,
+model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=15,
           validation_data=(validdata, validgold))
-score, acc = model.evaluate(testdata, testgold,
-                            batch_size=batch_size)
-print('Test score:', score)
-print('Test accuracy:', acc)
+
+
+preds = model.predict(testdata, batch_size=batch_size)[:, 0]
+print(preds.shape, testgold.shape)
+tot = testgold.shape[0]
+acc = np.sum(preds == testgold) * 100. / tot
+print(np.argwhere(testgold).shape)
+goldpos = set(list(np.argwhere(testgold)[:, 0]))
+predpos = set(list(np.argwhere(preds)[:, 0]))
+a = len(goldpos.intersection(predpos)) * 100. / tot
+b = len(predpos.intersection(goldpos)) * 100. / tot
+
+print(acc, a, b)
