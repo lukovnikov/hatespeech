@@ -11,7 +11,7 @@ Some configurations won't converge.
 from what you see with CNNs/MLPs/etc.
 '''
 from __future__ import print_function
-import numpy as np, csv
+import numpy as np, csv, keras
 from IPython import embed
 np.random.seed(1337)  # for reproducibility
 
@@ -31,6 +31,7 @@ class _GlobalPooling1D(Layer):
     def __init__(self, **kwargs):
         super(_GlobalPooling1D, self).__init__(**kwargs)
         self.input_spec = [InputSpec(ndim=3)]
+        #self.supports_masking = True
 
     def get_output_shape_for(self, input_shape):
         return (input_shape[0], input_shape[2])
@@ -39,7 +40,7 @@ class _GlobalPooling1D(Layer):
         raise NotImplementedError
 
 
-class GlobalAveragePooling1D(_GlobalPooling1D):
+class GlobalMaxPooling1D(_GlobalPooling1D):
     '''Global average pooling operation for temporal data.
     # Input shape
         3D tensor with shape: `(samples, steps, features)`.
@@ -47,8 +48,17 @@ class GlobalAveragePooling1D(_GlobalPooling1D):
         2D tensor with shape: `(samples, features)`.
     '''
 
+    def compute_mask(self, x, mask):
+        return None
+
     def call(self, x, mask=None):
-        return K.mean(x, axis=1)
+        ret = K.max(x, axis=1)
+        return ret
+        #sum = K.sum(x, axis=1)      # (samples, features)
+        #tot = K.sum(mask, axis=1) if mask is not None else x.shape[1]  # (samples, )
+        #return sum / tot
+
+print(keras.__version__)
 
 max_features = 20000
 maxlen = 80  # cut texts after this number of words (among top max_features most common words)
@@ -132,7 +142,8 @@ model.add(Embedding(len(dic)+1, 200, dropout=0.2, mask_zero=True))
 model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
-model.add(GlobalAveragePooling1D())
+model.add(GlobalMaxPooling1D())
+model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
 model.compile(loss='binary_crossentropy',
