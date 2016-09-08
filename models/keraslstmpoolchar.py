@@ -158,7 +158,7 @@ model.compile(loss='binary_crossentropy',
               metrics=['accuracy'])
 
 print('Train...')
-model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=30,
+model.fit(subtraindata, subtraingold, batch_size=batch_size, nb_epoch=30,
           validation_data=(testdata, testgold))
 score, acc = model.evaluate(testdata, testgold,
                             batch_size=batch_size)
