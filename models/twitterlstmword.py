@@ -18,6 +18,7 @@ np.random.seed(1337)  # for reproducibility
 from keras.preprocessing import sequence
 from keras.utils import np_utils
 from keras.models import Sequential
+from keras.optimizers import Adadelta
 from keras.engine import Layer, InputSpec
 from keras import backend as K
 from keras.layers.core import Dense, Dropout, Activation
@@ -139,8 +140,18 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 # load data
 (traindata, traingold), (testdata, testgold), dic = readdata("../data/twitter/train.ascii.csv", "../data/twitter/train.ascii.csv",
                                                              mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
-testdata = testdata[:500]
-testgold = testgold[:500]
+# split
+idxs = np.arange(0, traindata.shape[0])
+np.random.shuffle(idxs)
+splitvalid = int(0.15*traindata.shape[0])
+print(splitvalid)
+validdata = traindata[idxs[:splitvalid]]
+validgold = traingold[idxs[:splitvalid]]
+splittest = int(0.30*traindata.shape[0])
+testdata = testdata[splitvalid:splittest]
+testgold = testgold[splitvalid:splittest]
+traindata = traindata[splittest:]
+traingold = traingold[splittest:]
 print("{}/{}".format(np.sum(traingold == 1), np.sum(traingold.shape[0])))
 
 print(traindata.shape, testdata.shape, len(dic))
@@ -166,12 +177,12 @@ model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
 model.compile(loss='binary_crossentropy',
-              optimizer='adadelta',
+              optimizer=Adadelta(),
               metrics=['accuracy'])
 
 print('Train...')
 model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=30,
-          validation_data=(testdata, testgold))
+          validation_data=(validdata, validgold))
 score, acc = model.evaluate(testdata, testgold,
                             batch_size=batch_size)
 print('Test score:', score)
