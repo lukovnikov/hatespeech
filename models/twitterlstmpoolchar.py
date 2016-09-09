@@ -167,7 +167,7 @@ print('Build model...')
 model = Sequential()
 model.add(Embedding(len(dic)+1, 50, dropout=0.0, mask_zero=True))
 model.add(LSTM(300, dropout_W=0.0, dropout_U=0.0, return_sequences=True))
-#model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
+model.add(LSTM(300, dropout_W=0, dropout_U=0, return_sequences=True))
 model.add(LSTM(300, dropout_W=0.0, dropout_U=0.0, return_sequences=maxpool))
 if maxpool:
     model.add(GlobalMaxPooling1D())
