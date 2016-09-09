@@ -141,8 +141,8 @@ if subsample:
     posindexes = np.argwhere(traingold)
     negindexes = np.argwhere(1-traingold)
     allindexes = sorted(list(posindexes[:, 0]) + list(negindexes[:posindexes.shape[0], 0]))
-    subtraindata = traindata[allindexes, :]
-    subtraingold = traingold[allindexes]
+    traindata = traindata[allindexes, :]
+    traingold = traingold[allindexes]
 
 
 #embed()
@@ -151,7 +151,7 @@ model = Sequential()
 model.add(Embedding(len(dic)+1, 300, dropout=0, mask_zero=True))
 model.add(LSTM(300, dropout_W=0, dropout_U=0, return_sequences=True))
 model.add(LSTM(300, dropout_W=0, dropout_U=0, return_sequences=True))
-#model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
+#model.add(LSTM(300, dropout_W=0, dropout_U=0, return_sequences=True))
 model.add(GlobalMaxPooling1D())
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
@@ -161,7 +161,7 @@ model.compile(loss='binary_crossentropy',
               metrics=['accuracy'])
 
 print('Train...')
-model.fit(subtraindata, subtraingold, batch_size=batch_size, nb_epoch=30,
+model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=30,
           validation_data=(testdata, testgold))
 
 
