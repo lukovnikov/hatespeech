@@ -1,11 +1,18 @@
 # -*- coding: utf-8 -*-
-
+"""
+Script for document classification task  for Kaggle hate speech detection
+Experimenting on different datasets
+using different classifiers and feature selection methods
+The code also experiments :
+- majority vote ensemble over all classifiers
+- blending over all classifiers
+"""
 import argparse
 import csv
 
 import numpy as np
 import pandas as pd
-from sklearn.svm import LinearSVC
+from sklearn.svm import LinearSVC, SVC
 from sklearn.linear_model import LogisticRegression
 from nltk.tokenize import TreebankWordTokenizer
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
@@ -17,6 +24,7 @@ from classes.Document import Document
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.cross_validation import train_test_split
 from unidecode import unidecode
+from sklearn.ensemble import VotingClassifier
 
 
 dataset = {"kaggle":"./data/kaggle/",
@@ -84,83 +92,118 @@ vectorizers = {
                         ),
                     "count_dict": CountVectorizer(
                             tokenizer=TreebankWordTokenizer().tokenize,
-                            ngram_range=(1, 5),
+                            ngram_range=(1, 3),
                             preprocessor = Document().preprocess,
                             vocabulary = hatebase
                         ),
                     "delta-tfidf": DeltaTfidf(
                             tokenizer = TreebankWordTokenizer().tokenize,
                             preprocessor = Document().preprocess
-                        )
-}
 
+                    )}
 
 classifiers = {
-                "LREG": LogisticRegression(penalty="l1", dual=False),
-                "BernoulliNB" : BernoulliNB(alpha=.01),
-                "svm_cv": GridSearchCV(
-                    LinearSVC(penalty="l1", dual=False),
-                    [{'C': [0.0001, 0.001, 0.03, 0.1, 1, 3, 10, 100, 1000]}] #range of C coefficients to try
+                "LREG": LogisticRegression(C=1000, penalty="l1", dual=False),
+                # "BernoulliNB": BernoulliNB(alpha=.01),
+                # "svm_cv": GridSearchCV(
+                #     LinearSVC(penalty="l1", dual=False),
+                #     [{'C': [0.0001, 0.001, 0.03, 0.1, 1, 3, 10, 100, 1000]}] #range of C coefficients to try
+                #     ),
+                "LREG_CV": GridSearchCV(
+                    LogisticRegression(penalty="l1", dual=False),
+                    [{'C': [0.0001, 0.001, 0.1, 1, 10, 100, 1000]}] #range of C coefficients to try
                     )
+                # "svc": GridSearchCV(SVC(probability=True),
+                #                     [{'C': [0.001, 0.03, 0.1, 1, 3, 10]}] #range of C coefficients to try
+                #     )
+                # "ADABOOST-SVM": AdaBoostClassifier(SVC(probability=True))
                 # "SGD" : SGDClassifier(loss="hinge", penalty="l1"),
                 # "KNN" : KNeighborsClassifier(n_neighbors=5, algorithm='auto')
 }
 
     #Feature Building
 features = {
-                "tfidf": FeatureUnion([
-                        ("tfidf", vectorizers["tfidf"])
-                ]),
-                "delta-tfidf": FeatureUnion([
-                        ("delta-tfidf", vectorizers["delta-tfidf"])
-                ]),
+                # "tfidf": FeatureUnion([
+                #         ("tfidf", vectorizers["tfidf"])
+                # ]),
+                # "delta-tfidf": FeatureUnion([
+                #         ("delta-tfidf", vectorizers["delta-tfidf"])
+                # ]),
                 "count": FeatureUnion([
                         ("count", vectorizers["count"])
                 ]),
-                "count_dict": FeatureUnion([
-                        ("count_dict", vectorizers["count_dict"])
-                ]),
+                # "count_dict": FeatureUnion([
+                #         ("count_dict", vectorizers["count_dict"])
+                # ]),
+                # "tfidf-count_dict": FeatureUnion([
+                #         ("count_dict", vectorizers["count_dict"]),
+                #         ("tfidf", vectorizers["tfidf"])
+                # ]),
+                # "delta-tfidf-count_dict": FeatureUnion([
+                #         ("count_dict", vectorizers["count_dict"]),
+                #         ("delta-tfidf", vectorizers["delta-tfidf"])
+                # ]),
                 "tfidf-count-count_dict": FeatureUnion([
                         ("count", vectorizers["count"]),
                         ("count_dict", vectorizers["count_dict"]),
                         ("tfidf", vectorizers["tfidf"])
                 ]),
-                "delta-tfidf-count-count_dict": FeatureUnion([
-                        ("count", vectorizers["count"]),
-                        ("count_dict", vectorizers["count_dict"]),
-                        ("delta-tfidf", vectorizers["delta-tfidf"])
-                ])
+                # "delta-tfidf-count-count_dict": FeatureUnion([
+                #         ("count", vectorizers["count"]),
+                #         ("count_dict", vectorizers["count_dict"]),
+                #         ("delta-tfidf", vectorizers["delta-tfidf"])
+                # ])
 
     }
 
 fout = open(args.output,"w")
 writer = csv.writer(fout)
+clfsc = 0
 
+ensemble_estimators = []
 for fvector_name,fvector in features.items():
     for clf_name, clf in classifiers.items():
+        clfsc += 1
 
         print "# %s\t%s" % (fvector_name, clf_name)
-
         pipeline = Pipeline([
-                        ('features', fvector),
-                        # ('select',selector),
-                        ('classifier', clf)])
+            ('features', fvector),
+            ('classifier', clf)]
+        )
+
+        pipeline.fit(X_train, y_train)
+        p = pipeline.predict_proba(X_test)
+        p = p[:, 1]
+
+        print classification_report(y_test, pipeline.predict(X_test))
+        roc = roc_auc_score(y_test, p)
+        print "roc auc is %s" % roc
+
+        # writer.writerow([
+        #     fvector_name,
+        #     clf_name,
+        #     roc
+        #     ])
+
+        # adding estimators to the ensemble
+        ensemble_estimators.append(("%s-%s" % (fvector_name, clf_name), pipeline))
 
 
-        pipeline.fit(X_train,y_train)
-        pred = pipeline.predict(X_test)
+print "Training the Ensemble.."
+ensemble_model = VotingClassifier(ensemble_estimators, voting='soft')
+ensemble_model.fit(X_train, y_train)
+pred = ensemble_model.predict_proba(X_test)
 
-        #metrics of each class
-        m1 = np.array(precision_recall_fscore_support(y_test, pred))
-        print classification_report(y_test, pred)
-        roc = roc_auc_score(y_test, pred)
-        print "roc auc is %s" %  roc
+print classification_report(y_test, ensemble_model.predict(X_test))
+roc = roc_auc_score(y_test, pred[:, 1])
+print "Total roc auc is %s" % roc
 
-        writer.writerow([
-            fvector_name,
-            clf_name,
-            roc
-            ])
+# writer.writerow([
+#             "ALL Blending",
+#             "ALL Blending",
+#             roc
+#             ])
+
 
 fout.close()
 
