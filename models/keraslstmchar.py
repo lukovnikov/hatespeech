@@ -102,10 +102,10 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 #embed()
 print('Build model...')
 model = Sequential()
-model.add(Embedding(len(dic)+1, 200, dropout=0.2, mask_zero=True))
-model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
-model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
-model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2))
+model.add(Embedding(len(dic)+1, 200, dropout=0, mask_zero=True))
+model.add(LSTM(300, dropout_W=0, dropout_U=0, return_sequences=True))
+model.add(LSTM(300, dropout_W=0, dropout_U=0, return_sequences=True))
+model.add(LSTM(200, dropout_W=0, dropout_U=0))
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
@@ -116,7 +116,19 @@ model.compile(loss='binary_crossentropy',
 print('Train...')
 model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=30,
           validation_data=(testdata, testgold))
-score, acc = model.evaluate(testdata, testgold,
-                            batch_size=batch_size)
-print('Test score:', score)
-print('Test accuracy:', acc)
+
+
+# evaluate
+preds = model.predict(testdata, batch_size=batch_size)[:, 0] > 0.5
+print(preds)
+print(preds.shape, testgold.shape)
+tot = testgold.shape[0]
+acc = np.sum(preds == testgold) * 100. / tot
+print(np.argwhere(testgold).shape)
+goldpos = set(list(np.argwhere(testgold)[:, 0]))
+predpos = set(list(np.argwhere(preds)[:, 0]))
+tp = len(goldpos.intersection(predpos))
+recall = tp * 100. / len(goldpos)
+precision = tp * 100. / len(predpos)
+
+print(acc, precision, recall, tp, tot, len(predpos))
