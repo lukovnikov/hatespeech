@@ -140,20 +140,9 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 
 # load data
 # TODO load data from pavlos
-(traindata, traingold), (testdata, testgold), dic = readdata("../data/kaggle/train.csv", "../data/kaggle/train.csv",
+(traindata, traingold), (testdata, testgold), dic = readdata("../data/kaggle/train.csv", "../data/kaggle/test.csv",
                                                              mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
-# split
-idxs = np.arange(0, traindata.shape[0])
-np.random.shuffle(idxs)
-splitvalid = int(0.15*traindata.shape[0])
-print(splitvalid)
-validdata = traindata[idxs[:splitvalid]]
-validgold = traingold[idxs[:splitvalid]]
-splittest = int(0.30*traindata.shape[0])
-testdata = testdata[splitvalid:splittest]
-testgold = testgold[splitvalid:splittest]
-traindata = traindata[splittest:]
-traingold = traingold[splittest:]
+
 print("{}/{}".format(np.sum(traingold == 1), np.sum(traingold.shape[0])))
 
 print(traindata.shape, testdata.shape, len(dic))
@@ -185,7 +174,7 @@ model.compile(loss='binary_crossentropy',
 
 print('Train...')
 model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=15,
-          validation_data=(validdata, validgold))
+          validation_data=(testdata, testgold))
 
 
 

@@ -162,7 +162,7 @@ else:
     (validdata, validgold) = d["validate"]
     (testdata, testgold) = d["test"]
     padsym = np.max(traindata)
-    #embed()
+    # embed()
     traindata[traindata == padsym] = 0
     validdata[validdata == padsym] = 0
     testdata[testdata == padsym] = 0
@@ -171,7 +171,7 @@ else:
     testgold -= 1
 
     dic = d["dictionary"]
-    embed()
+    # embed()
 
 print("{}/{}".format(np.sum(traingold == 1), np.sum(traingold.shape[0])))
 
