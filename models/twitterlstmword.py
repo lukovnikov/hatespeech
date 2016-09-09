@@ -68,7 +68,7 @@ mode = "word"
 subsample = False
 maxpool = True
 dropout = 0.0
-loadclean = True
+loadclean = False
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
     assert(mode is not None)
