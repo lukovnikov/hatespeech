@@ -65,7 +65,7 @@ maxlen = 100  # cut texts after this number of words (among top max_features mos
 batch_size = 200
 mode = "char"
 subsample = False
-maxpool = False
+maxpool = True
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
     assert(mode is not None)
