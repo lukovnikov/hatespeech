@@ -101,7 +101,7 @@ def readdata_word(trainp, testp, maxlen=100, masksym=-1):
         datamat = np.ones((len(dataret) - 1, maxlen)).astype("int32") * masksym
         for i in range(1, len(dataret)):
             datamat[i - 1, :min(len(dataret[i]), maxlen)] = dataret[i][:min(len(dataret[i]), maxlen)]
-        return datamat, np.asarray(goldret[1:], dtype="int32") - 1, wdic
+        return datamat, np.asarray(goldret[1:], dtype="int32"), wdic
 
     traindata, traingold, wdic = readdataset(trainp, {}, maxlen=maxlen)
     testdata, testgold, wdic = readdataset(testp, wdic=wdic, maxlen=maxlen)
@@ -146,6 +146,10 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 print("{}/{}".format(np.sum(traingold == 1), np.sum(traingold.shape[0])))
 
 print(traindata.shape, testdata.shape, len(dic))
+
+
+embed()
+
 #embed()
 # subsample for balancing
 if subsample:
