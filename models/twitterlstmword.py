@@ -68,6 +68,7 @@ mode = "word"
 subsample = False
 maxpool = True
 dropout = 0.0
+loadclean = True
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
     assert(mode is not None)
@@ -138,22 +139,31 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
     chardic = {chr(k): v for k, v in chardic.items() if k != masksym}
     return (traindata, traingold), (testdata, testgold), chardic
 
-# load data
-# TODO load data from pavlos
-(traindata, traingold), (testdata, testgold), dic = readdata("../data/twitter/train.ascii.csv", "../data/twitter/train.ascii.csv",
-                                                             mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
-# split
-idxs = np.arange(0, traindata.shape[0])
-np.random.shuffle(idxs)
-splitvalid = int(0.15*traindata.shape[0])
-print(splitvalid)
-validdata = traindata[idxs[:splitvalid]]
-validgold = traingold[idxs[:splitvalid]]
-splittest = int(0.30*traindata.shape[0])
-testdata = testdata[splitvalid:splittest]
-testgold = testgold[splitvalid:splittest]
-traindata = traindata[splittest:]
-traingold = traingold[splittest:]
+if not loadclean:
+    # load data
+    #(traindata, traingold), (testdata, testgold), dic = readdata("../data/twitter/train.ascii.csv", "../data/twitter/train.ascii.csv",
+    #                                                             mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
+    # split
+    idxs = np.arange(0, traindata.shape[0])
+    np.random.shuffle(idxs)
+    splitvalid = int(0.15*traindata.shape[0])
+    print(splitvalid)
+    validdata = traindata[idxs[:splitvalid]]
+    validgold = traingold[idxs[:splitvalid]]
+    splittest = int(0.30*traindata.shape[0])
+    testdata = testdata[splitvalid:splittest]
+    testgold = testgold[splitvalid:splittest]
+    traindata = traindata[splittest:]
+    traingold = traingold[splittest:]
+else:
+    import pickle
+    d = pickle.load(open("../data/twitter/twitter.clean.pkl"))
+    embed()
+    (traindata, traingold) = d["train"]
+    (validdata, validgold) = d["validate"]
+    (testdata, testgold) = d["test"]
+    dic = d["dictionary"]
+
 print("{}/{}".format(np.sum(traingold == 1), np.sum(traingold.shape[0])))
 
 print(traindata.shape, testdata.shape, len(dic))
