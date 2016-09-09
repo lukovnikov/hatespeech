@@ -66,7 +66,7 @@ maxlen = 200  # cut texts after this number of words (among top max_features mos
 batch_size = 200
 mode = "word"
 subsample = False
-maxpool = True
+maxpool = False
 dropout = 0.0
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
