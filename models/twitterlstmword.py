@@ -181,8 +181,14 @@ model.compile(loss='binary_crossentropy',
               metrics=['accuracy'])
 
 
+print('Train...')
+model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=15,
+          validation_data=(validdata, validgold))
+
+
+
 # evaluate
-preds = (model.predict(testdata, batch_size=batch_size)[:, 0] > 0.0) * 1
+preds = model.predict(testdata, batch_size=batch_size)[:, 0] > 0.5
 print(preds)
 print(preds.shape, testgold.shape)
 tot = testgold.shape[0]
@@ -194,12 +200,4 @@ tp = len(goldpos.intersection(predpos))
 recall = tp * 100. / len(goldpos)
 precision = tp * 100. / len(predpos)
 
-print(acc, precision, recall, tp, tot)
-
-
-print('Train...')
-model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=15,
-          validation_data=(validdata, validgold))
-
-
-
+print(acc, precision, recall, tp, tot, len(predpos))
