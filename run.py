@@ -24,7 +24,9 @@ from classes.Document import Document
 from sklearn.naive_bayes import BernoulliNB
 from sklearn.cross_validation import train_test_split
 from unidecode import unidecode
+from sklearn.cross_validation import StratifiedKFold
 from sklearn.ensemble import VotingClassifier
+
 
 
 dataset = {"kaggle":"./data/kaggle/",
@@ -79,6 +81,10 @@ else:
 hatebase = pd.read_csv('./data/hatebase/hatebase.csv').vocabulary.values
 
 
+########################
+# Creating Vectorizers #
+########################
+
 vectorizers = {
                     "tfidf": TfidfVectorizer(
                             tokenizer=TreebankWordTokenizer().tokenize,
@@ -102,16 +108,20 @@ vectorizers = {
 
                     )}
 
+#########################
+# Creating Classifiers #
+#########################
+
 classifiers = {
                 "LREG": LogisticRegression(C=1000, penalty="l1", dual=False),
-                # "BernoulliNB": BernoulliNB(alpha=.01),
+                "BernoulliNB": BernoulliNB(alpha=.01),
                 # "svm_cv": GridSearchCV(
                 #     LinearSVC(penalty="l1", dual=False),
                 #     [{'C': [0.0001, 0.001, 0.03, 0.1, 1, 3, 10, 100, 1000]}] #range of C coefficients to try
                 #     ),
                 "LREG_CV": GridSearchCV(
                     LogisticRegression(penalty="l1", dual=False),
-                    [{'C': [0.0001, 0.001, 0.1, 1, 10, 100, 1000]}] #range of C coefficients to try
+                    [{'C': [0.0001, 0.001, 0.1, 1, 10, 100]}] #range of C coefficients to try
                     )
                 # "svc": GridSearchCV(SVC(probability=True),
                 #                     [{'C': [0.001, 0.03, 0.1, 1, 3, 10]}] #range of C coefficients to try
@@ -121,14 +131,17 @@ classifiers = {
                 # "KNN" : KNeighborsClassifier(n_neighbors=5, algorithm='auto')
 }
 
-    #Feature Building
+###########################
+# Feature Vector Building #
+###########################
+
 features = {
                 # "tfidf": FeatureUnion([
                 #         ("tfidf", vectorizers["tfidf"])
                 # ]),
-                # "delta-tfidf": FeatureUnion([
-                #         ("delta-tfidf", vectorizers["delta-tfidf"])
-                # ]),
+                "delta-tfidf": FeatureUnion([
+                        ("delta-tfidf", vectorizers["delta-tfidf"])
+                ]),
                 "count": FeatureUnion([
                         ("count", vectorizers["count"])
                 ]),
@@ -148,28 +161,36 @@ features = {
                         ("count_dict", vectorizers["count_dict"]),
                         ("tfidf", vectorizers["tfidf"])
                 ]),
-                # "delta-tfidf-count-count_dict": FeatureUnion([
-                #         ("count", vectorizers["count"]),
-                #         ("count_dict", vectorizers["count_dict"]),
-                #         ("delta-tfidf", vectorizers["delta-tfidf"])
-                # ])
+                "delta-tfidf-count-count_dict": FeatureUnion([
+                        ("count", vectorizers["count"]),
+                        ("count_dict", vectorizers["count_dict"]),
+                        ("delta-tfidf", vectorizers["delta-tfidf"])
+                ])
 
     }
 
-fout = open(args.output,"w")
-writer = csv.writer(fout)
-clfsc = 0
 
-ensemble_estimators = []
+############################################
+# Training / Testing / Stacking / Blending #
+############################################
+
+clfs = []
+
 for fvector_name,fvector in features.items():
     for clf_name, clf in classifiers.items():
-        clfsc += 1
-
-        print "# %s\t%s" % (fvector_name, clf_name)
         pipeline = Pipeline([
             ('features', fvector),
             ('classifier', clf)]
         )
+        clfs.append(("%s-%s" % (fvector_name, clf_name), pipeline))
+
+
+fout = open(args.output,"w")
+writer = csv.writer(fout)
+
+for clf_name, pipeline in clfs:
+
+        print "# %s" % clf_name
 
         pipeline.fit(X_train, y_train)
         p = pipeline.predict_proba(X_test)
@@ -179,18 +200,18 @@ for fvector_name,fvector in features.items():
         roc = roc_auc_score(y_test, p)
         print "roc auc is %s" % roc
 
-        # writer.writerow([
-        #     fvector_name,
-        #     clf_name,
-        #     roc
-        #     ])
+        writer.writerow([
+            fvector_name,
+            clf_name,
+            roc
+            ])
 
-        # adding estimators to the ensemble
-        ensemble_estimators.append(("%s-%s" % (fvector_name, clf_name), pipeline))
-
+############
+# Ensemble #
+############
 
 print "Training the Ensemble.."
-ensemble_model = VotingClassifier(ensemble_estimators, voting='soft')
+ensemble_model = VotingClassifier(clfs, voting='soft')
 ensemble_model.fit(X_train, y_train)
 pred = ensemble_model.predict_proba(X_test)
 
@@ -198,11 +219,56 @@ print classification_report(y_test, ensemble_model.predict(X_test))
 roc = roc_auc_score(y_test, pred[:, 1])
 print "Total roc auc is %s" % roc
 
-# writer.writerow([
-#             "ALL Blending",
-#             "ALL Blending",
-#             roc
-#             ])
+writer.writerow([
+            "ALL ensemble",
+            "ALL ensemble",
+            roc
+            ])
+
+
+############
+# Blending #
+############
+
+dataset_blend_train = np.zeros((X_train.shape[0], len(clfs)))
+dataset_blend_test = np.zeros((X_test.shape[0], len(clfs)))
+
+skf = list(StratifiedKFold(y_train, 5))
+
+for j, (clfname, clf) in enumerate(clfs):
+
+    print j, clfname
+
+    dataset_blend_test_j = np.zeros((X_test.shape[0], len(skf)))
+    for i, (train, test) in enumerate(skf):
+        print "Fold", i
+        xf_train = X_train[train]
+        yf_train = y_train[train]
+        xf_test = X_train[test]
+        yf_test = y_train[test]
+        clf.fit(xf_train, yf_train)
+        y_submission = clf.predict_proba(xf_test)[:, 1]
+        dataset_blend_train[test, j] = y_submission
+        dataset_blend_test_j[:, i] = clf.predict_proba(X_test)[:, 1]
+    dataset_blend_test[:, j] = dataset_blend_test_j.mean(1)
+
+
+print "Blending."
+clf = LogisticRegression()
+clf.fit(dataset_blend_train, y_train)
+y_submission = clf.predict_proba(dataset_blend_test)[:, 1]
+y_submission = (y_submission - y_submission.min()) / (y_submission.max() - y_submission.min())
+
+roc = roc_auc_score(y_test, y_submission)
+print "Total roc auc is %s" % roc
+
+
+writer.writerow([
+            "ALL Blending",
+            "ALL Blending",
+            roc
+            ])
+
 
 
 fout.close()
