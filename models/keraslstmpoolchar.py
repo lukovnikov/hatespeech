@@ -64,6 +64,7 @@ max_features = 20000
 maxlen = 100  # cut texts after this number of words (among top max_features most common words)
 batch_size = 20
 mode = "char"
+subsample = False
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
     assert(mode is not None)
@@ -136,18 +137,20 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
                                                              mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
 
 # subsample for balancing
-posindexes = np.argwhere(traingold)
-negindexes = np.argwhere(1-traingold)
-allindexes = sorted(list(posindexes[:, 0]) + list(negindexes[:posindexes.shape[0], 0]))
-subtraindata = traindata[allindexes, :]
-subtraingold = traingold[allindexes]
+if subsample:
+    posindexes = np.argwhere(traingold)
+    negindexes = np.argwhere(1-traingold)
+    allindexes = sorted(list(posindexes[:, 0]) + list(negindexes[:posindexes.shape[0], 0]))
+    subtraindata = traindata[allindexes, :]
+    subtraingold = traingold[allindexes]
+
 
 #embed()
 print('Build model...')
 model = Sequential()
-model.add(Embedding(len(dic)+1, 300, dropout=0.2, mask_zero=True))
-model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
-model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
+model.add(Embedding(len(dic)+1, 300, dropout=0, mask_zero=True))
+model.add(LSTM(300, dropout_W=0, dropout_U=0, return_sequences=True))
+model.add(LSTM(300, dropout_W=0, dropout_U=0, return_sequences=True))
 #model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
 model.add(GlobalMaxPooling1D())
 model.add(Dense(1))
@@ -160,7 +163,19 @@ model.compile(loss='binary_crossentropy',
 print('Train...')
 model.fit(subtraindata, subtraingold, batch_size=batch_size, nb_epoch=30,
           validation_data=(testdata, testgold))
-score, acc = model.evaluate(testdata, testgold,
-                            batch_size=batch_size)
-print('Test score:', score)
-print('Test accuracy:', acc)
+
+
+# evaluate
+preds = model.predict(testdata, batch_size=batch_size)[:, 0] > 0.5
+print(preds)
+print(preds.shape, testgold.shape)
+tot = testgold.shape[0]
+acc = np.sum(preds == testgold) * 100. / tot
+print(np.argwhere(testgold).shape)
+goldpos = set(list(np.argwhere(testgold)[:, 0]))
+predpos = set(list(np.argwhere(preds)[:, 0]))
+tp = len(goldpos.intersection(predpos))
+recall = tp * 100. / len(goldpos)
+precision = tp * 100. / len(predpos)
+
+print(acc, precision, recall, tp, tot, len(predpos))

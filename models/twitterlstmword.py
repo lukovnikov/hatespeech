@@ -67,6 +67,7 @@ batch_size = 200
 mode = "word"
 subsample = False
 maxpool = False
+dropout = 0.0
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
     assert(mode is not None)
@@ -167,10 +168,10 @@ if subsample:
 #embed()
 print('Build model...')
 model = Sequential()
-model.add(Embedding(len(dic)+1, 50, dropout=0.2, mask_zero=True))
-model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
-#model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=True))
-model.add(LSTM(300, dropout_W=0.2, dropout_U=0.2, return_sequences=maxpool))
+model.add(Embedding(len(dic)+1, 50, dropout=dropout, mask_zero=True))
+model.add(LSTM(300, dropout_W=dropout, dropout_U=0.0, return_sequences=True))
+#model.add(LSTM(300, dropout_W=0.2, dropout_U=0, return_sequences=True))
+model.add(LSTM(300, dropout_W=dropout, dropout_U=0, return_sequences=maxpool))
 if maxpool:
     model.add(GlobalMaxPooling1D())
 model.add(Dense(1))

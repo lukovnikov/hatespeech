@@ -139,8 +139,18 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 # load data
 (traindata, traingold), (testdata, testgold), dic = readdata("../data/twitter/train.csv", "../data/twitter/train.csv",
                                                              mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
-testdata = testdata[:500]
-testgold = testgold[:500]
+# split
+idxs = np.arange(0, traindata.shape[0])
+np.random.shuffle(idxs)
+splitvalid = int(0.15*traindata.shape[0])
+print(splitvalid)
+validdata = traindata[idxs[:splitvalid]]
+validgold = traingold[idxs[:splitvalid]]
+splittest = int(0.30*traindata.shape[0])
+testdata = testdata[splitvalid:splittest]
+testgold = testgold[splitvalid:splittest]
+traindata = traindata[splittest:]
+traingold = traingold[splittest:]
 print("{}/{}".format(np.sum(traingold == 1), np.sum(traingold.shape[0])))
 
 print(traindata.shape, testdata.shape, len(dic))
@@ -171,7 +181,20 @@ model.compile(loss='binary_crossentropy',
 print('Train...')
 model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=30,
           validation_data=(testdata, testgold))
-score, acc = model.evaluate(testdata, testgold,
-                            batch_size=batch_size)
-print('Test score:', score)
-print('Test accuracy:', acc)
+
+
+
+# evaluate
+preds = model.predict(testdata, batch_size=batch_size)[:, 0] > 0.5
+print(preds)
+print(preds.shape, testgold.shape)
+tot = testgold.shape[0]
+acc = np.sum(preds == testgold) * 100. / tot
+print(np.argwhere(testgold).shape)
+goldpos = set(list(np.argwhere(testgold)[:, 0]))
+predpos = set(list(np.argwhere(preds)[:, 0]))
+tp = len(goldpos.intersection(predpos))
+recall = tp * 100. / len(goldpos)
+precision = tp * 100. / len(predpos)
+
+print(acc, precision, recall, tp, tot, len(predpos))
