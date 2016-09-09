@@ -11,22 +11,63 @@ Some configurations won't converge.
 from what you see with CNNs/MLPs/etc.
 '''
 from __future__ import print_function
-import numpy as np, csv
-np.random.seed(1337)  # for reproducibility
+import numpy as np, csv, keras, unidecode
+from IPython import embed
+np.random.seed(1345)  # for reproducibility
 
 from keras.preprocessing import sequence
 from keras.utils import np_utils
 from keras.models import Sequential
+from keras.optimizers import Adadelta
+from keras.engine import Layer, InputSpec
+from keras import backend as K
 from keras.layers.core import Dense, Dropout, Activation
 from keras.layers.embeddings import Embedding
 from keras.layers.recurrent import LSTM, SimpleRNN, GRU
 from keras.datasets import imdb
 from nltk.tokenize import word_tokenize as tokenize
 
+class _GlobalPooling1D(Layer):
+
+    def __init__(self, **kwargs):
+        super(_GlobalPooling1D, self).__init__(**kwargs)
+        self.input_spec = [InputSpec(ndim=3)]
+        #self.supports_masking = True
+
+    def get_output_shape_for(self, input_shape):
+        return (input_shape[0], input_shape[2])
+
+    def call(self, x, mask=None):
+        raise NotImplementedError
+
+
+class GlobalMaxPooling1D(_GlobalPooling1D):
+    '''Global average pooling operation for temporal data.
+    # Input shape
+        3D tensor with shape: `(samples, steps, features)`.
+    # Output shape
+        2D tensor with shape: `(samples, features)`.
+    '''
+
+    def compute_mask(self, x, mask):
+        return None
+
+    def call(self, x, mask=None):
+        ret = K.max(x, axis=1)
+        return ret
+        #sum = K.sum(x, axis=1)      # (samples, features)
+        #tot = K.sum(mask, axis=1) if mask is not None else x.shape[1]  # (samples, )
+        #return sum / tot
+
+print(keras.__version__)
+
 max_features = 20000
-maxlen = 80  # cut texts after this number of words (among top max_features most common words)
-batch_size = 500
+maxlen = 200  # cut texts after this number of words (among top max_features most common words)
+batch_size = 200
 mode = "word"
+subsample = False
+maxpool = True
+dropout = 0.0
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
     assert(mode is not None)
@@ -46,7 +87,7 @@ def readdata_word(trainp, testp, maxlen=100, masksym=-1):
         with open(p) as f:
             data = csv.reader(f, delimiter=",")
             for row in data:
-                rowelems = tokenize(row[2])
+                rowelems = tokenize(unidecode.unidecode(row[2].decode("utf-8")))
                 realmaxlen = max(realmaxlen, len(rowelems))
                 if len(rowelems) > maxlen:
                     toolong += 1
@@ -60,7 +101,7 @@ def readdata_word(trainp, testp, maxlen=100, masksym=-1):
         datamat = np.ones((len(dataret) - 1, maxlen)).astype("int32") * masksym
         for i in range(1, len(dataret)):
             datamat[i - 1, :min(len(dataret[i]), maxlen)] = dataret[i][:min(len(dataret[i]), maxlen)]
-        return datamat, np.asarray(goldret[1:], dtype="int32"), wdic
+        return datamat, np.asarray(goldret[1:], dtype="int32") - 1, wdic
 
     traindata, traingold, wdic = readdataset(trainp, {}, maxlen=maxlen)
     testdata, testgold, wdic = readdataset(testp, wdic=wdic, maxlen=maxlen)
@@ -68,24 +109,27 @@ def readdata_word(trainp, testp, maxlen=100, masksym=-1):
 
 
 def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
-    def readdataset(p):
+    def readdataset(p, maxlen=500):
         dataret = []
         goldret = []
         toolong = 0
+        realmaxlen = 0
         with open(p) as f:
             data = csv.reader(f, delimiter=",")
             for row in data:
+                realmaxlen = max(realmaxlen, len(row[2]))
                 if len(row[2]) > maxlen:
                     toolong += 1
                 dataret.append([ord(x) for x in row[2]])
                 goldret.append(row[0])
         print("{} comments were too long".format(toolong))
+        maxlen = min(maxlen, realmaxlen)
         datamat = np.ones((len(dataret)-1, maxlen)).astype("int32") * masksym
         for i in range(1, len(dataret)):
             datamat[i-1, :min(len(dataret[i]), maxlen)] = dataret[i][:min(len(dataret[i]), maxlen)]
-        return datamat, np.asarray(goldret[1:], dtype="int32")
-    traindata, traingold = readdataset(trainp)
-    testdata, testgold = readdataset(testp)
+        return datamat, np.asarray(goldret[1:], dtype="int32") - 1
+    traindata, traingold = readdataset(trainp, maxlen=maxlen)
+    testdata, testgold = readdataset(testp, maxlen=maxlen)
     allchars = set(list(np.unique(traindata))).union(set(list(np.unique(testdata))))
     chardic = dict(zip(list(allchars), range(len(allchars))))
     chardic[masksym] = masksym
@@ -95,26 +139,67 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
     return (traindata, traingold), (testdata, testgold), chardic
 
 # load data
-(traindata, traingold), (testdata, testgold), dic = readdata("../data/kaggle/train.csv", "../data/kaggle/test_with_solutions.csv",
+# TODO load data from pavlos
+(traindata, traingold), (testdata, testgold), dic = readdata("../data/kaggle/train.csv", "../data/kaggle/train.csv",
                                                              mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
+# split
+idxs = np.arange(0, traindata.shape[0])
+np.random.shuffle(idxs)
+splitvalid = int(0.15*traindata.shape[0])
+print(splitvalid)
+validdata = traindata[idxs[:splitvalid]]
+validgold = traingold[idxs[:splitvalid]]
+splittest = int(0.30*traindata.shape[0])
+testdata = testdata[splitvalid:splittest]
+testgold = testgold[splitvalid:splittest]
+traindata = traindata[splittest:]
+traingold = traingold[splittest:]
+print("{}/{}".format(np.sum(traingold == 1), np.sum(traingold.shape[0])))
 
+print(traindata.shape, testdata.shape, len(dic))
+#embed()
+# subsample for balancing
+if subsample:
+    posindexes = np.argwhere(traingold)
+    negindexes = np.argwhere(1-traingold)
+    allindexes = sorted(list(posindexes[:, 0]) + list(negindexes[:posindexes.shape[0], 0]))
+    traindata = traindata[allindexes, :]
+    traingold = traingold[allindexes]
+
+#embed()
 print('Build model...')
 model = Sequential()
-model.add(Embedding(len(dic), 200, dropout=0.2, mask_zero=True))
-model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2, return_sequences=True))  # try using a GRU instead, for fun
-model.add(LSTM(200, dropout_W=0.2, dropout_U=0.2))
+model.add(Embedding(len(dic)+1, 50, dropout=dropout, mask_zero=True))
+model.add(LSTM(300, dropout_W=dropout, dropout_U=0.0, return_sequences=True))
+#model.add(LSTM(300, dropout_W=0.2, dropout_U=0, return_sequences=True))
+model.add(LSTM(300, dropout_W=dropout, dropout_U=0, return_sequences=maxpool))
+if maxpool:
+    model.add(GlobalMaxPooling1D())
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
-# try using different optimizers and different optimizer configs
 model.compile(loss='binary_crossentropy',
-              optimizer='adam',
+              optimizer=Adadelta(),
               metrics=['accuracy'])
+
 
 print('Train...')
 model.fit(traindata, traingold, batch_size=batch_size, nb_epoch=15,
-          validation_data=(testdata, testgold))
-score, acc = model.evaluate(testdata, testgold,
-                            batch_size=batch_size)
-print('Test score:', score)
-print('Test accuracy:', acc)
+          validation_data=(validdata, validgold))
+
+
+
+# evaluate
+preds = model.predict(testdata, batch_size=batch_size)[:, 0] > 0.5
+print(preds)
+print(preds.shape, testgold.shape)
+tot = testgold.shape[0]
+acc = np.sum(preds == testgold) * 100. / tot
+print(np.argwhere(testgold).shape)
+goldpos = set(list(np.argwhere(testgold)[:, 0]))
+predpos = set(list(np.argwhere(preds)[:, 0]))
+tp = len(goldpos.intersection(predpos))
+recall = tp * 100. / len(goldpos)
+precision = tp * 100. / len(predpos)
+
+print(acc, precision, recall, tp, tot, len(predpos))

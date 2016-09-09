@@ -13,7 +13,7 @@ from what you see with CNNs/MLPs/etc.
 from __future__ import print_function
 import numpy as np, csv, keras, unidecode
 from IPython import embed
-np.random.seed(1337)  # for reproducibility
+np.random.seed(1345)  # for reproducibility
 
 from keras.preprocessing import sequence
 from keras.utils import np_utils
@@ -139,6 +139,7 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
     return (traindata, traingold), (testdata, testgold), chardic
 
 # load data
+# TODO load data from pavlos
 (traindata, traingold), (testdata, testgold), dic = readdata("../data/twitter/train.ascii.csv", "../data/twitter/train.ascii.csv",
                                                              mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
 # split
