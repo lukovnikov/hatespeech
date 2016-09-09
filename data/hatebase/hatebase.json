@@ -1,8 +1,4 @@
-{
-  "version": "3.0",
-  "number_of_results": "575",
-  "data": {
-    "datapoint": [
+[
       {
         "vocabulary": "abbo",
         "variant_of": "abo",
@@ -2810,7 +2806,7 @@
         "number_of_sightings": "1072",
         "last_sighting": "2016-09-02 11:08:24",
         "number_of_citations": "1"
-      }
+      },
       {
         "vocabulary": "chav",
         "variant_of": {
@@ -5596,7 +5592,7 @@
         "number_of_sightings": "1779",
         "last_sighting": "2016-09-04 23:43:29",
         "number_of_citations": "1"
-      }
+      },
       {
         "vocabulary": "guala guala",
         "variant_of": "guala",
@@ -8322,7 +8318,7 @@
         "number_of_sightings": "50",
         "last_sighting": "2016-08-24 19:55:44",
         "number_of_citations": "1"
-      }
+      },
       {
         "vocabulary": "moch",
         "variant_of": "mocky",
@@ -11066,7 +11062,7 @@
         "number_of_sightings": "796",
         "last_sighting": "2016-08-23 20:38:45",
         "number_of_citations": "0"
-      }
+      },
       {
         "vocabulary": "popolo",
         "variant_of": {
@@ -13862,7 +13858,7 @@
           
         },
         "number_of_citations": "0"
-      }
+      },
       {
         "vocabulary": "stump jumper",
         "variant_of": {
@@ -15954,5 +15950,3 @@
         "number_of_citations": "0"
       }
     ]
-  }
-}
