@@ -141,8 +141,8 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
 
 if not loadclean:
     # load data
-    #(traindata, traingold), (testdata, testgold), dic = readdata("../data/twitter/train.ascii.csv", "../data/twitter/train.ascii.csv",
-    #                                                             mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
+    (traindata, traingold), (testdata, testgold), dic = readdata("../data/twitter/train.ascii.csv", "../data/twitter/train.ascii.csv",
+                                                                 mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
     # split
     idxs = np.arange(0, traindata.shape[0])
     np.random.shuffle(idxs)
@@ -158,11 +158,20 @@ if not loadclean:
 else:
     import pickle
     d = pickle.load(open("../data/twitter/twitter.clean.pkl"))
-    embed()
     (traindata, traingold) = d["train"]
     (validdata, validgold) = d["validate"]
     (testdata, testgold) = d["test"]
+    padsym = np.max(traindata)
+    #embed()
+    traindata[traindata == padsym] = 0
+    validdata[validdata == padsym] = 0
+    testdata[testdata == padsym] = 0
+    traingold -= 1
+    validgold -= 1
+    testgold -= 1
+
     dic = d["dictionary"]
+    embed()
 
 print("{}/{}".format(np.sum(traingold == 1), np.sum(traingold.shape[0])))
 
