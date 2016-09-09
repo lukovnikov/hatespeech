@@ -68,6 +68,7 @@ mode = "word"
 subsample = False
 maxpool = False
 dropout = 0.0
+loadclean = True
 
 def readdata(trainp, testp, mode=None, masksym=-1, maxlen=100):
     assert(mode is not None)
@@ -139,9 +140,25 @@ def readdata_char(trainp, testp, maxlen=1000, masksym=-1):
     return (traindata, traingold), (testdata, testgold), chardic
 
 # load data
-# TODO load data from pavlos
-(traindata, traingold), (testdata, testgold), dic = readdata("../data/kaggle/train.csv", "../data/kaggle/test.csv",
-                                                             mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
+if loadclean:
+    import pickle
+    d = pickle.load(open("../data/kaggle/kaggle.clean.pkl"))
+    (traindata, traingold) = d["train"]
+    (validdata, validgold) = d["validate"]
+    (testdata, testgold) = d["test"]
+    padsym = np.max(traindata)
+    # embed()
+    traindata[traindata == padsym] = 0
+    validdata[validdata == padsym] = 0
+    testdata[testdata == padsym] = 0
+    traingold -= 1
+    validgold -= 1
+    testgold -= 1
+
+    dic = d["dictionary"]
+else:
+    (traindata, traingold), (testdata, testgold), dic = readdata("../data/kaggle/train.csv", "../data/kaggle/test.csv",
+                                                                 mode=mode, masksym=0, maxlen=maxlen if mode == "word" else maxlen*8)
 
 print("{}/{}".format(np.sum(traingold == 1), np.sum(traingold.shape[0])))
 
@@ -162,10 +179,10 @@ if subsample:
 #embed()
 print('Build model...')
 model = Sequential()
-model.add(Embedding(len(dic)+1, 50, dropout=dropout, mask_zero=True))
-model.add(LSTM(300, dropout_W=dropout, dropout_U=0.0, return_sequences=True))
+model.add(Embedding(len(dic)+1, 100, dropout=dropout, mask_zero=True))
+#model.add(LSTM(300, dropout_W=dropout, dropout_U=0.0, return_sequences=True))
 #model.add(LSTM(300, dropout_W=0.2, dropout_U=0, return_sequences=True))
-model.add(LSTM(300, dropout_W=dropout, dropout_U=0, return_sequences=maxpool))
+model.add(LSTM(200, dropout_W=dropout, dropout_U=0, return_sequences=maxpool))
 if maxpool:
     model.add(GlobalMaxPooling1D())
 model.add(Dense(1))
